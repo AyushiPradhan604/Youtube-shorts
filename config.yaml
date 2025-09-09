@@ -1,0 +1,42 @@
+# API Configuration
+youtube:
+  api_key_env: "YOUTUBE_API_KEY"
+  max_results_per_query: 50
+  max_total_results: 500
+  quota_retry_delay: 60  # seconds
+  max_retries: 3
+
+tmdb:
+  api_key_env: "TMDB_API_KEY"
+  base_url: "https://api.themoviedb.org/3"
+
+omdb:
+  api_key_env: "OMDB_API_KEY"
+  base_url: "http://www.omdbapi.com"
+
+# Filtering Configuration
+filtering:
+  min_relevance_score: 0.3
+  use_semantic_similarity: true
+  semantic_model: "sentence-transformers/all-MiniLM-L6-v2"
+  keyword_weight: 0.4
+  semantic_weight: 0.6
+
+# Storage Configuration
+storage:
+  output_formats: ["json", "csv"]  # json, csv, or both
+  download_videos: false
+  video_quality: "worst[height<=480]"  # yt-dlp format
+  create_directories: true
+
+# Search Configuration
+search:
+  short_duration_threshold: 60  # seconds
+  search_keywords: ["short", "clip", "scene", "trailer", "teaser", "preview"]
+  exclude_keywords: ["full movie", "complete", "entire", "whole"]
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "pipeline.log"
