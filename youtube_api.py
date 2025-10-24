@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-YOUTUBE_API_KEY="AIzaSyAnzXQfREpDHg0fTXyO5j6pHY9hwyxRgTk"
+YOUTUBE_API_KEY="AIzaSyBzJw8LDEzWbSsSinpCuLOvYRexJaBVNF4"
 
 class YouTubeAPI:
     """
@@ -18,8 +18,8 @@ class YouTubeAPI:
         # Use environment variable first, fallback to hardcoded key
         self.api_key = YOUTUBE_API_KEY
 
-        self.max_results_per_query = config.get('max_results_per_query', 50)
-        self.max_total_results = config.get('max_total_results', 500)
+        self.max_results_per_query = config.get('max_results_per_query', 1)
+        self.max_total_results = config.get('max_total_results', 5)
         self.quota_retry_delay = config.get('quota_retry_delay', 60)
         self.max_retries = config.get('max_retries', 3)
 

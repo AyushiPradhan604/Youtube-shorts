@@ -13,7 +13,7 @@ from storage import DatasetStorage
 
 # -------------------------------
 # Hardcoded API keys
-YOUTUBE_API_KEY = "AIzaSyAnzXQfREpDHg0fTXyO5j6pHY9hwyxRgTk"
+YOUTUBE_API_KEY = "AIzaSyBzJw8LDEzWbSsSinpCuLOvYRexJaBVNF4"
 TMDB_API_KEY = "22d95288429b11d8ba8b809f83eb3752"
 OMDB_API_KEY = "dd17f76f"
 # -------------------------------
