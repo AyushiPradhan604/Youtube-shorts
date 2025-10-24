@@ -130,6 +130,34 @@ class MovieShortsDatasetPipeline:
             handlers=[logging.FileHandler(log_config["file"]), logging.StreamHandler()],
         )
 
+    def _preprocess_title(self, title: str) -> str:
+        """
+        Clean YouTube video title to extract proper movie name.
+        Steps:
+        1. Remove emojis and non-alphanumeric characters except spaces.
+        2. Remove common trailer-related words like Trailer, Teaser, Official, HD.
+        3. Keep only text before separators like |, :, -, ~.
+        4. Collapse multiple spaces.
+        """
+        import re
+
+        # Remove emojis and weird characters first
+        title = re.sub(r'[^\w\s|:-]', '', title)
+
+        # Keep only text before |, :, - separators
+        parts = re.split(r'[|:-]', title)
+        title = parts[0] if parts else title
+
+        # Remove common words (Trailer, Official, Teaser, HD, etc.)
+        title = re.sub(r'\b(Trailer|Official|Teaser|HD|HQ|Full Movie|Clip|Preview)\b', '', title, flags=re.IGNORECASE)
+
+        # Collapse multiple spaces and strip
+        title = re.sub(r'\s+', ' ', title).strip()
+
+        return title
+
+
+
     async def run_pipeline(
         self, trailer_url: str, output_path: str, download_videos: bool = False
     ) -> Dict[str, Any]:
@@ -180,7 +208,7 @@ class MovieShortsDatasetPipeline:
             return None
 
         original_title = video_data.get("title", "")
-        cleaned_title = re.split(r"[|:-]", original_title)[0].strip()
+        cleaned_title = self._preprocess_title(original_title)
         self.logger.info(f"Cleaned movie title: '{cleaned_title}'")
 
         movie_info = await self.movie_api.identify_movie(
@@ -192,6 +220,7 @@ class MovieShortsDatasetPipeline:
 
         movie_info["trailer_data"] = video_data
         return movie_info
+
 
     async def _retrieve_shorts(self, movie_info: Dict[str, Any]) -> List[Dict[str, Any]]:
         movie_title = movie_info.get("title", "")
