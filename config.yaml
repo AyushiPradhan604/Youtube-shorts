@@ -1,8 +1,8 @@
 # API Configuration
 youtube:
   api_key_env: "AIzaSyCx5CsNFMNgunLROPVAdBElVy-5MUNPmhE"
-  max_results_per_query: 50
-  max_total_results: 500
+  max_results_per_query: 5
+  max_total_results: 10
   quota_retry_delay: 60  # seconds
   max_retries: 3
 
