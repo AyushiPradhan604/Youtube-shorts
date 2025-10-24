@@ -1,0 +1,36 @@
+youtube:
+  api_key_env: "YOUTUBE_API_KEY"
+  max_results_per_query: 5    # Only fetch 5 Shorts per query
+  max_total_results: 20       # Stop after 20 total results
+  quota_retry_delay: 10
+  max_retries: 1
+
+tmdb:
+  api_key_env: "TMDB_API_KEY"
+  base_url: "https://api.themoviedb.org/3"
+
+omdb:
+  api_key_env: "OMDB_API_KEY"
+  base_url: "http://www.omdbapi.com"
+
+filtering:
+  min_relevance_score: 0.1    # Low threshold to quickly get results
+  use_semantic_similarity: false  # Skip transformer embedding for speed
+  keyword_weight: 1.0
+  semantic_weight: 0.0
+
+storage:
+  output_formats: ["json"]
+  download_videos: false
+  video_quality: "worst[height<=480]"
+  create_directories: false
+
+search:
+  short_duration_threshold: 60
+  search_keywords: ["official", "clip", "scene"]
+  exclude_keywords: ["full movie", "complete"]
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "pipeline_fast_test.log"
