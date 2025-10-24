@@ -8,7 +8,7 @@ from pathlib import Path
 from pipeline import MovieShortsDatasetPipeline
 
 # Hardcoded API keys
-YOUTUBE_API_KEY = "AIzaSyCx5CsNFMNgunLROPVAdBElVy-5MUNPmhE"
+YOUTUBE_API_KEY = "AIzaSyDufdG16fqf9pp5CxDFwpA-CGbxOMHAslo"
 TMDB_API_KEY = "22d95288429b11d8ba8b809f83eb3752"
 OMDB_API_KEY = "dd17f76f"
 
