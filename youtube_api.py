@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-YOUTUBE_API_KEY="AIzaSyBzJw8LDEzWbSsSinpCuLOvYRexJaBVNF4"
+YOUTUBE_API_KEY="AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
 
 class YouTubeAPI:
     """

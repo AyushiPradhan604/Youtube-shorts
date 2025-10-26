@@ -63,3 +63,5 @@ Thumbs.db
 # Model cache (sentence-transformers)
 .cache/
 sentence-transformers-cache/
+
+Qwen1.5-0.5B-Chat

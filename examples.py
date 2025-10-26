@@ -51,7 +51,7 @@ async def example_with_custom_config():
     # Create a custom config for high-quality results
     custom_config_content = """
 youtube:
-  api_key_env: "YOUTUBE_API_KEY"
+  api_key_env: YOUTUBE_API_KEY
   max_results_per_query: 25
   max_total_results: 100
   quota_retry_delay: 60

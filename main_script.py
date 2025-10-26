@@ -4,6 +4,8 @@ import json
 import csv
 import os
 
+#we need to load the qwen model which will correctly identify the model
+
 # Input and output files
 input_csv = "trailer_urls_list.csv"
 output_csv = "generated_data.csv"

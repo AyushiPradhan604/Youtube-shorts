@@ -1,11 +1,14 @@
 import logging
+import os
 import asyncio
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 import yaml
 import re
 import httpx  # Async HTTP client
-import logging
+import torch
+import re
+from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 
 from youtube_api import YouTubeAPI
 from filtering import RelevanceFilter
@@ -13,10 +16,11 @@ from storage import DatasetStorage
 
 # -------------------------------
 # Hardcoded API keys
-YOUTUBE_API_KEY = "AIzaSyBzJw8LDEzWbSsSinpCuLOvYRexJaBVNF4"
+YOUTUBE_API_KEY = "AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
 TMDB_API_KEY = "22d95288429b11d8ba8b809f83eb3752"
 OMDB_API_KEY = "dd17f76f"
 # -------------------------------
+
 
 @dataclass
 class PipelineConfig:
@@ -25,6 +29,7 @@ class PipelineConfig:
     filtering_config: Dict[str, Any]
     storage_config: Dict[str, Any]
     search_config: Dict[str, Any]
+
 
 class MovieAPI:
     """Async Movie API wrapper for TMDb and OMDb with retries and timeout."""
@@ -88,7 +93,8 @@ class MovieAPI:
                 await asyncio.sleep(2)
         self.logger.error(f"All {retries} attempts failed for {url}")
         return None
-   
+
+
 class MovieShortsDatasetPipeline:
     """Main pipeline orchestrator for creating YouTube Shorts datasets"""
 
@@ -98,10 +104,39 @@ class MovieShortsDatasetPipeline:
 
         # Initialize components
         self.youtube_api = YouTubeAPI(self.config.youtube_config)
-        self.movie_api = MovieAPI(tmdb_key=TMDB_API_KEY, omdb_key=OMDB_API_KEY)  # <-- pass keys here
+        self.movie_api = MovieAPI(tmdb_key=TMDB_API_KEY, omdb_key=OMDB_API_KEY)
         self.relevance_filter = RelevanceFilter(self.config.filtering_config)
         self.storage = DatasetStorage(self.config.storage_config)
         self.logger = logging.getLogger(__name__)
+        os.environ["HF_HUB_OFFLINE"] = "1"
+
+        # -------------------------------
+        # Load Qwen model once (for efficiency)
+        # -------------------------------
+       
+        self.logger.info("Loading local Qwen1.5-0.5B-Chat model for movie name deduction...")
+
+
+        model_path = "./Qwen1.5-0.5B-Chat"  # Local folder path (same directory as pipeline.py)
+
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_path,
+                trust_remote_code=True
+            )
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_path,
+                torch_dtype="auto",       # Let PyTorch pick best available type
+                device_map="cpu",         # Ensure it runs fully on CPU
+                trust_remote_code=True
+            )
+            self.logger.info("✅ Qwen1.5-0.5B-Chat model loaded successfully (CPU mode).")
+        except Exception as e:
+            self.logger.error(f"❌ Failed to load Qwen model from {model_path}: {e}")
+            raise
+        
+
+        # -------------------------------
 
     def _load_config(self, config_path: str) -> PipelineConfig:
         try:
@@ -130,33 +165,93 @@ class MovieShortsDatasetPipeline:
             handlers=[logging.FileHandler(log_config["file"]), logging.StreamHandler()],
         )
 
-    def _preprocess_title(self, title: str) -> str:
+    # -------------------------------
+    # New LLM-based movie title deduction
+    # -------------------------------
+ 
+
+    async def _deduce_movie_name_with_llm(self, title: str, description: str = "") -> str:
         """
-        Clean YouTube video title to extract proper movie name.
-        Steps:
-        1. Remove emojis and non-alphanumeric characters except spaces.
-        2. Remove common trailer-related words like Trailer, Teaser, Official, HD.
-        3. Keep only text before separators like |, :, -, ~.
-        4. Collapse multiple spaces.
+        Uses local Qwen model to intelligently infer the correct movie name
+        from YouTube title and description, with post-processing, fallback,
+        and final hardcoded cleanup.
         """
-        import re
+        # -------------------------------
+        # Step 1: LLM prompt
+        # -------------------------------
+        prompt = f"""
+        Extract the movie title ONLY from the following YouTube trailer information.
 
-        # Remove emojis and weird characters first
-        title = re.sub(r'[^\w\s|:-]', '', title)
+        Title: {title}
+        Description: {description}
 
-        # Keep only text before |, :, - separators
-        parts = re.split(r'[|:-]', title)
-        title = parts[0] if parts else title
+        Respond with ONLY the movie title. No extra text.
+        """
 
-        # Remove common words (Trailer, Official, Teaser, HD, etc.)
-        title = re.sub(r'\b(Trailer|Official|Teaser|HD|HQ|Full Movie|Clip|Preview)\b', '', title, flags=re.IGNORECASE)
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
 
-        # Collapse multiple spaces and strip
-        title = re.sub(r'\s+', ' ', title).strip()
+        # Configure generation to avoid prompt echo
+        gen_config = GenerationConfig(
+            max_new_tokens=20,
+            do_sample=False,
+            temperature=0.0,
+            top_p=1.0,
+            eos_token_id=self.tokenizer.eos_token_id
+        )
 
-        return title
+        # -------------------------------
+        # Step 2: Generate title with LLM
+        # -------------------------------
+        try:
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    **inputs,
+                    generation_config=gen_config,
+                    return_dict_in_generate=True,
+                    output_scores=False
+                )
 
+            # Only the generated portion (exclude prompt)
+            raw_title = self.tokenizer.decode(
+                outputs.sequences[0][inputs['input_ids'].shape[-1]:],
+                skip_special_tokens=True
+            ).strip()
 
+        except Exception as e:
+            self.logger.warning(f"LLM failed with error: {e}")
+            raw_title = ""
+
+        # -------------------------------
+        # Step 3: Post-process LLM output
+        # -------------------------------
+        if raw_title:
+            # Remove trailing punctuation, extra whitespace
+            clean_title = re.sub(r'[\|\-\_\(\)\[\]\{\}\:]*$', '', raw_title).strip()
+            # Remove common extra words mistakenly included
+            clean_title = re.sub(r'(trailer|official|clip|hd|movie|full).*$', '', clean_title, flags=re.IGNORECASE).strip()
+        else:
+            clean_title = ""
+
+        # -------------------------------
+        # Step 4: Fallback regex extraction from video title
+        # -------------------------------
+        if not clean_title:
+            clean_title = title
+            # Remove year in parentheses
+            clean_title = re.sub(r'\(\d{4}\)', '', clean_title)
+            # Remove words like "trailer", "official", etc.
+            clean_title = re.sub(r'(trailer|official|clip|hd|movie|full).*$', '', clean_title, flags=re.IGNORECASE)
+            clean_title = clean_title.strip()
+
+        # -------------------------------
+        # Step 5: Final hardcoded cleanup
+        # -------------------------------
+        clean_title = re.sub(r'[\|\;\\\/]+', '', clean_title)  # remove | ; \ /
+        clean_title = re.sub(r'\s{2,}', ' ', clean_title)      # collapse multiple spaces
+        clean_title = clean_title.strip()
+
+        self.logger.info(f"LLM-deduced and cleaned movie title: '{clean_title}'")
+        return clean_title
 
     async def run_pipeline(
         self, trailer_url: str, output_path: str, download_videos: bool = False
@@ -208,8 +303,13 @@ class MovieShortsDatasetPipeline:
             return None
 
         original_title = video_data.get("title", "")
-        cleaned_title = self._preprocess_title(original_title)
-        self.logger.info(f"Cleaned movie title: '{cleaned_title}'")
+
+        # 🧠 LLM-based movie title inference
+        self.logger.info("Inferring movie title using Qwen-3-8B model...")
+        cleaned_title = await self._deduce_movie_name_with_llm(
+            original_title, video_data.get("description", "")
+        )
+        self.logger.info(f"LLM-deduced movie title: '{cleaned_title}'")
 
         movie_info = await self.movie_api.identify_movie(
             cleaned_title, video_data.get("description", "")
@@ -221,7 +321,7 @@ class MovieShortsDatasetPipeline:
         movie_info["trailer_data"] = video_data
         return movie_info
 
-
+    # (Rest of the code for retrieve_shorts, filtering, storage, etc. remains unchanged)
     async def _retrieve_shorts(self, movie_info: Dict[str, Any]) -> List[Dict[str, Any]]:
         movie_title = movie_info.get("title", "")
         search_keywords = self.config.search_config["search_keywords"]
@@ -286,3 +386,5 @@ class MovieShortsDatasetPipeline:
                 "created_at": asyncio.get_event_loop().time(),
             },
         }
+
+
