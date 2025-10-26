@@ -1,17 +1,17 @@
 # API Configuration
 youtube:
-  api_key_env: "AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
+  api_key_env: "YOUTUBE_API_KEY"
   max_results_per_query: 1
   max_total_results: 5
   quota_retry_delay: 60  # seconds
   max_retries: 3
 
 tmdb:
-  api_key_env: "22d95288429b11d8ba8b809f83eb3752"
+  api_key_env: "TMDB_API_KEY"
   base_url: "https://api.themoviedb.org/3"
 
 omdb:
-  api_key_env: "dd17f76f"
+  api_key_env: "OMDB_API_KEY"
   base_url: "http://www.omdbapi.com"
 
 # Filtering Configuration

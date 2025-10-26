@@ -5,8 +5,16 @@ import re
 from typing import List, Dict, Any, Optional
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from dotenv import load_dotenv
+import os
 
-YOUTUBE_API_KEY="AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
+# Load variables from .env file
+load_dotenv()
+
+# Access the variables
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+#YOUTUBE_API_KEY="AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
 
 class YouTubeAPI:
     """

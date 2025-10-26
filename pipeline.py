@@ -13,12 +13,19 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, GenerationConfig
 from youtube_api import YouTubeAPI
 from filtering import RelevanceFilter
 from storage import DatasetStorage
+from dotenv import load_dotenv
+import os
 
+# Load variables from .env file
+load_dotenv()
+
+# Access the variables
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 # -------------------------------
 # Hardcoded API keys
-YOUTUBE_API_KEY = "AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
-TMDB_API_KEY = "22d95288429b11d8ba8b809f83eb3752"
-OMDB_API_KEY = "dd17f76f"
+#YOUTUBE_API_KEY = "AIzaSyB2LTOyquEjMklc2RWs9iEr7xfC0ITCCMs"
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 # -------------------------------
 
 
@@ -99,6 +106,10 @@ class MovieShortsDatasetPipeline:
     """Main pipeline orchestrator for creating YouTube Shorts datasets"""
 
     def __init__(self, config_path: str = "config.yaml"):
+        
+        
+        
+        
         self.config = self._load_config(config_path)
         self._setup_logging()
 
@@ -109,6 +120,7 @@ class MovieShortsDatasetPipeline:
         self.storage = DatasetStorage(self.config.storage_config)
         self.logger = logging.getLogger(__name__)
         os.environ["HF_HUB_OFFLINE"] = "1"
+        
 
         # -------------------------------
         # Load Qwen model once (for efficiency)
